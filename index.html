@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Self-Learning AI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+        }
+        h2 { color: #333; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 70px);
+            grid-template-rows: repeat(4, 70px);
+            gap: 5px;
+            justify-content: center;
+            margin: 20px auto;
+        }
+        .cell {
+            background-color: #fff;
+            border: 2px solid #ccc;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .goal { background-color: #d4edda; border-color: #28a745; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:active { background-color: #0056b3; }
+        #log {
+            margin-top: 15px;
+            font-weight: bold;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>🤖 Mobile Self-Learning AI</h2>
+    <p>The AI learns to reach the 🎯 Goal from the top-left corner.</p>
+
+    <div class="grid" id="grid"></div>
+
+    <button onclick="trainAI()">Train AI (Fast)</button>
+    <button onclick="testAI()">Watch Trained AI</button>
+
+    <div id="log">Status: Ready to train</div>
+
+    <script>
+        // Grid setup: 4x4 grid (States 0 to 15)
+        const rows = 4, cols = 4;
+        const nStates = rows * cols;
+        const nActions = 4; // 0: Up, 1: Down, 2: Left, 3: Right
+        const goalState = 15; // Bottom-right corner
+
+        // Q-Table: 16 states x 4 actions initialized to 0
+        let Q = Array.from({ length: nStates }, () => Array(nActions).fill(0));
+
+        // Hyperparameters
+        const alpha = 0.2;  // Learning rate
+        const gamma = 0.9;  // Discount factor
+
+        let currentState = 0;
+
+        // Render the grid visually
+        function renderGrid(agentPos) {
+            const gridEl = document.getElementById('grid');
+            gridEl.innerHTML = '';
+            for (let i = 0; i < nStates; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                if (i === goalState) {
+                    cell.classList.add('goal');
+                    cell.innerHTML = '🎯';
+                }
+                if (i === agentPos) {
+                    cell.innerHTML = '🤖';
+                }
+                gridEl.appendChild(cell);
+            }
+        }
+
+        // Get valid next state and reward based on action
+        function step(state, action) {
+            let r = Math.floor(state / cols);
+            let c = state % cols;
+
+            if (action === 0) r = Math.max(0, r - 1);       // Up
+            else if (action === 1) r = Math.min(rows - 1, r + 1); // Down
+            else if (action === 2) c = Math.max(0, c - 1);       // Left
+            else if (action === 3) c = Math.min(cols - 1, c + 1); // Right
+
+            let nextState = r * cols + c;
+            let reward = -1; // Standard step penalty
+
+            if (nextState === goalState) {
+                reward = 100; // Big reward for reaching the goal
+            }
+            return { nextState, reward };
+        }
+
+        // Train the AI over 2000 episodes instantly
+        function trainAI() {
+            document.getElementById('log').innerText = "Training in progress...";
+            
+            for (let episode = 0; episode < 2000; episode++) {
+                let state = 0; // Start at top-left
+                while (state !== goalState) {
+                    // Epsilon-greedy action choice
+                    let action = Math.random() < 0.2 ? Math.floor(Math.random() * nActions) : 
+                                 Q[state].indexOf(Math.max(...Q[state]));
+
+                    let { nextState, reward } = step(state, action);
+
+                    // Q-learning update formula
+                    let maxNextQ = Math.max(...Q[nextState]);
+                    Q[state][action] += alpha * (reward + gamma * maxNextQ - Q[state][action]);
+
+                    state = nextState;
+                }
+            }
+            document.getElementById('log').innerText = "Training Complete! Click 'Watch Trained AI'.";
+            renderGrid(0);
+        }
+
+        // Test the AI step-by-step so you can watch it move
+        function testAI() {
+            currentState = 0;
+            renderGrid(currentState);
+            document.getElementById('log').innerText = "AI is navigating...";
+
+            let interval = setInterval(() => {
+                if (currentState === goalState) {
+                    clearInterval(interval);
+                    document.getElementById('log').innerText = "Success! AI reached the goal!";
+                    return;
+                }
+                // Choose the best learned action
+                let bestAction = Q[currentState].indexOf(Math.max(...Q[currentState]));
+                let result = step(currentState, bestAction);
+                currentState = result.nextState;
+                renderGrid(currentState);
+            }, 400); // Moves every 400ms
+        }
+
+        // Initial render
+        renderGrid(0);
+    </script>
+</body>
+</html>
